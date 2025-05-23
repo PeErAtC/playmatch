@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './components/sidebar';
 import NavbarHome from './components/navbarhome';
 
@@ -14,6 +14,19 @@ const Home = () => {
   const [experience, setExperience] = useState('');
   const [status, setStatus] = useState('');
   const [msg, setMsg] = useState('');
+  const [users, setUsers] = useState([]); // เพิ่ม state สำหรับเก็บข้อมูลผู้ใช้
+
+  // ดึงข้อมูลผู้ใช้เมื่อเปิดหน้า
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const res = await fetch('/api/getUsers'); // ใช้ API ดึงข้อมูล
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data.users); // เก็บข้อมูลผู้ใช้ใน state
+      }
+    };
+    fetchUsers();
+  }, []); // รันเมื่อหน้าแรกเปิด
 
   const openModal = () => {
     setModalOpen(true);
@@ -46,7 +59,7 @@ const Home = () => {
       status,
     };
 
-    const res = await fetch('/api/addUser', {
+    const res = await fetch('/api/addMember', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newUser),
@@ -57,6 +70,10 @@ const Home = () => {
     if (res.ok) {
       setMsg('User added successfully!');
       closeModal();
+      // ดึงข้อมูลผู้ใช้ใหม่หลังจากเพิ่มผู้ใช้
+      const updatedUsers = await fetch('/api/getUsers');
+      const usersData = await updatedUsers.json();
+      setUsers(usersData.users);
     } else {
       setMsg(data.message || 'Error adding user');
     }
@@ -99,13 +116,24 @@ const Home = () => {
               </tr>
             </thead>
             <tbody>
-              {/* แสดงข้อมูลผู้ใช้ */}
+              {users.filter(user => user.name.toLowerCase().includes(search.toLowerCase())).map((user) => (
+                <tr key={user.id}>
+                  <td><input type="checkbox" /></td>
+                  <td>{user.name}</td>
+                  <td>{user.level}</td>
+                  <td>{user.lineId}</td>
+                  <td>{user.handed}</td>
+                  <td>{user.phone}</td>
+                  <td>{user.age}</td>
+                  <td>{user.experience}</td>
+                  <td>{user.status}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </main>
 
-      {/* Modal สำหรับเพิ่มผู้ใช้ */}
       {modalOpen && (
         <div className="modal">
           <div className="modal-content">
@@ -113,11 +141,25 @@ const Home = () => {
             <form onSubmit={handleSubmit} className="user-form">
               <div className="form-group">
                 <input type="text" placeholder="ชื่อ" value={name} onChange={(e) => setName(e.target.value)} />
-                <input type="text" placeholder="ระดับ" value={level} onChange={(e) => setLevel(e.target.value)} />
+                <select value={level} onChange={(e) => setLevel(e.target.value)}>
+                  <option value="">เลือกระดับ</option>
+                  <option value="BG">BG</option>
+                  <option value="S-">S-</option>
+                  <option value="S">S</option>
+                  <option value="N-">N-</option>
+                  <option value="N">N</option>
+                  <option value="P-">P-</option>
+                  <option value="P">P</option>
+                  <option value="C">C</option>
+                </select>
               </div>
               <div className="form-group">
                 <input type="text" placeholder="LINE ID" value={lineId} onChange={(e) => setLineId(e.target.value)} />
-                <input type="text" placeholder="มือที่ถนัด" value={handed} onChange={(e) => setHanded(e.target.value)} />
+                <select value={handed} onChange={(e) => setHanded(e.target.value)}>
+                  <option value="">เลือกมือที่ถนัด</option>
+                  <option value="ขวา">ขวา</option>
+                  <option value="ซ้าย">ซ้าย</option>
+                </select>
               </div>
               <div className="form-group">
                 <input type="text" placeholder="เบอร์ติดต่อ" value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -125,7 +167,11 @@ const Home = () => {
               </div>
               <div className="form-group">
                 <input type="text" placeholder="ประสบการณ์" value={experience} onChange={(e) => setExperience(e.target.value)} />
-                <input type="text" placeholder="สถานะ" value={status} onChange={(e) => setStatus(e.target.value)} />
+                <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                  <option value="">เลือกสถานะ</option>
+                  <option value="มา">มา</option>
+                  <option value="ไม่มา">ไม่มา</option>
+                </select>
               </div>
               <div className="form-buttons">
                 <button type="submit">เพิ่มผู้ใช้</button>
@@ -162,7 +208,7 @@ const Home = () => {
           flex-wrap: wrap;
         }
 
-        input[type='text'], input[type='number'] {
+        input[type='text'], input[type='number'], select {
           flex: 1;
           padding: 10px 14px;
           font-size: 1rem;
@@ -199,7 +245,7 @@ const Home = () => {
           font-size: 0.9rem;
           color: #222;
           min-width: 800px;
-          background-color: #2c3e50; /* สีพื้นหลังตารางเดียวกับ sidebar */
+          background-color: #fff; /* ทำให้พื้นหลังของตารางเป็นสีขาว */
         }
 
         table.user-table th,
@@ -207,7 +253,16 @@ const Home = () => {
           border: 1px solid #ddd;
           padding: 12px;
           text-align: center;
-          background-color: #34495e; /* สีพื้นหลังเซลล์ในตาราง */
+        }
+
+        /* กำหนดพื้นหลังของแถวข้อมูลเป็นสีขาว */
+        table.user-table tbody tr {
+          background-color: #fff;
+        }
+
+        /* กำหนดสีของตัวอักษรในแถวข้อมูลให้เป็นสีดำ */
+        table.user-table tbody td {
+          color: #333; /* ตัวหนังสือสีดำ */
         }
 
         table.user-table th {

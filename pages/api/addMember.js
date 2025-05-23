@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
-  password: '',  // ใส่รหัสผ่านถ้ามี
+  password: '',  // รหัสผ่าน (ถ้ามี)
   database: 'playmatch_db',
 });
 
@@ -12,16 +12,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { name, email, password, level, lineId, handed, phone, age, experience, status } = req.body;
+  const { name, level, lineId, handed, phone, age, experience, status } = req.body;
 
-  if (!name || !email || !password || !level || !lineId || !handed || !phone || !age || !experience || !status) {
+  if (!name || !level || !lineId || !handed || !phone || !age || !experience || !status) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
   try {
     const [rows] = await pool.query(
-      'INSERT INTO users (name, email, password, level, lineId, handed, phone, age, experience, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, email, password, level, lineId, handed, phone, age, experience, status]
+      'INSERT INTO group_members (admin_username, name, level, lineId, handed, phone, age, experience, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['admin_username', name, level, lineId, handed, phone, age, experience, status]
     );
 
     return res.status(201).json({ message: 'User added successfully', userId: rows.insertId });
